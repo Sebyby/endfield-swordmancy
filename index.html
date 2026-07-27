@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trial of Swordmancy — Daily</title>
+<style>
+:root{
+  --ground:#E4E5DF; --panel:#F7F7F4; --panel-2:#EDEEE9;
+  --ink:#151C24; --ink-2:#4E5860; --ink-3:#7C858C;
+  --rule:#C6CAC2; --rule-2:#DDE0D9;
+  --seal:#B03A2E; --seal-soft:#F0DDD9;
+  --jade:#356F60; --jade-soft:#DCE8E3;
+  --amber:#96701A; --amber-soft:#F2E9D4;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:"Helvetica Neue",Helvetica,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;padding:0 0 60px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 18px}
+
+header{border-bottom:2px solid var(--ink);margin-bottom:18px;padding:20px 0 12px}
+.masthead{display:flex;flex-wrap:wrap;align-items:flex-end;gap:18px;justify-content:space-between}
+h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.05}
+h1 span{display:block;font-family:var(--mono);font-size:9.5px;font-weight:600;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.ev-head{text-align:right}
+.ev-head .lab{font-family:var(--mono);font-size:9px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--ink-3)}
+.ev-head .num{font-family:var(--mono);font-size:30px;font-weight:700;
+  letter-spacing:-.03em;line-height:1;margin-top:2px}
+.ev-head .num small{font-size:11px;font-weight:500;color:var(--ink-3);letter-spacing:0}
+
+.selectors{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+@media(max-width:760px){.selectors{grid-template-columns:1fr}}
+.sel{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:13px 14px 14px}
+.sel .lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:9px}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{flex:1 1 auto;min-width:36px;font-family:var(--mono);font-size:13px;font-weight:700;
+  padding:8px 4px;border:1px solid var(--rule);background:var(--panel-2);color:var(--ink-2);
+  border-radius:2px;cursor:pointer}
+.seg button:hover{border-color:var(--ink-3);color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.sel .meta{font-family:var(--mono);font-size:11px;color:var(--ink-2);margin-top:10px;
+  padding-top:9px;border-top:1px solid var(--rule-2);line-height:1.6}
+.sel .meta b{color:var(--ink)}
+.sel .meta .warn{color:var(--seal)}
+
+.cols{display:block}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media(max-width:760px){.cols2{grid-template-columns:1fr}}
+.rule{height:1px;background:var(--rule-2);margin:16px 0}
+.handrow{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.handrow .payout{margin:0}
+
+/* plate tiles — deck state and the draw input are the same control */
+.plates{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:9px 0 14px}
+.plate{font-family:var(--mono);border:1.5px dashed var(--ink-3);background:var(--panel);
+  border-radius:2px;padding:9px 7px 8px;cursor:pointer;text-align:center}
+.plate:hover:not(:disabled){border-style:solid;border-color:var(--seal)}
+.plate:disabled{opacity:.3;cursor:not-allowed}
+.plate .v{font-size:20px;font-weight:700;color:var(--ink);line-height:1}
+.plate .bar{display:flex;gap:1px;height:8px;margin:7px 0 5px}
+.plate .bar i{flex:1;min-width:1px;background:var(--ink);border-radius:1px}
+.plate .bar i.used{background:var(--rule-2)}
+.plate .ct{font-size:9.5px;color:var(--ink-3)}
+.plate:disabled .v{color:var(--ink-3)}
+/* solver says DRAW — the plates are the button to press */
+.plates.rec .plate:not(:disabled){border-style:solid;border-color:var(--seal);
+  box-shadow:0 0 0 2px var(--seal-soft)}
+#plateLab.rec{color:var(--seal);font-weight:700}
+
+/* the button the solver wants you to press */
+.btn.rec{box-shadow:0 0 0 2px var(--panel),0 0 0 4px currentColor}
+.btn.go.rec,.btn.rec{color:var(--panel)}
+.btn.bail.rec{color:var(--amber);box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--amber)}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:3px;
+  padding:15px 15px 17px;margin-bottom:16px}
+.card > h2{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--ink-2);margin:0 0 13px;padding-bottom:8px;
+  border-bottom:1px solid var(--rule-2);display:flex;justify-content:space-between;
+  align-items:baseline;gap:8px}
+.card > h2 em{font-style:normal;font-weight:500;letter-spacing:.05em;color:var(--ink-3);
+  text-transform:none;font-size:10.5px}
+
+.pips-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pipgroup .plab{font-family:var(--mono);font-size:9px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.pips{display:flex;gap:5px}
+.pip{width:30px;height:30px;border-radius:2px;border:1.5px solid var(--ink);
+  background:var(--ink);cursor:pointer;padding:0}
+.pip[aria-pressed="true"]{background:var(--panel);border-color:var(--rule);border-style:dashed}
+.pip.dbl{border-color:var(--seal);background:var(--seal)}
+.pip.dbl[aria-pressed="true"]{background:var(--panel);border-color:var(--rule)}
+.pip.none{border-color:var(--rule);background:var(--panel-2);cursor:default;opacity:.45}
+.pipgroup .pnote{font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-top:5px}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{font-family:var(--mono);font-size:15px;font-weight:700;width:38px;height:42px;
+  border:1px solid var(--ink);background:var(--panel);border-radius:2px;color:var(--ink);
+  display:flex;align-items:center;justify-content:center}
+.chip.empty{border-style:dotted;border-color:var(--rule);color:var(--rule)}
+.btn{background:var(--ink);color:var(--panel);border:none;border-radius:2px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:600;padding:8px 11px;cursor:pointer}
+.btn:hover{background:var(--seal)}
+.btn.ghost{background:transparent;color:var(--ink-2);border:1px solid var(--rule)}
+.btn.ghost:hover{background:var(--panel-2);color:var(--ink);border-color:var(--ink-3)}
+.btn.go{background:var(--jade)} .btn.go:hover{background:#2A5A4E}
+.btn.bail{background:transparent;color:var(--amber);border:1px solid var(--amber)}
+.btn.bail:hover{background:var(--amber-soft)}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.btn:disabled:hover{background:var(--ink)}
+.btn.ghost:disabled:hover,.btn.bail:disabled:hover{background:transparent}
+.btn.go:disabled:hover{background:var(--jade)}
+button:focus-visible{outline:2px solid var(--seal);outline-offset:2px}
+
+/* payout readout + lap gauge */
+.payout{display:flex;align-items:baseline;gap:10px;margin:18px 0 4px;flex-wrap:wrap}
+.payout .big{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.payout .lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3)}
+.payout .tier{font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+.payout.peak .big{color:var(--jade)}
+.payout.dead .big{color:var(--seal)}
+
+.laps{display:flex;gap:9px;margin:14px 0 5px;align-items:flex-end}
+.lap{display:flex;flex-direction:column;gap:0}
+.lap .ln{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:14px}
+.lapbar{display:flex;gap:2px}
+.tick{width:20px;height:22px;background:var(--panel-2);border:1px solid var(--rule-2);
+  border-radius:1px;position:relative}
+.tick.filled{background:var(--ink);border-color:var(--ink)}
+.tick.peak{border-color:var(--jade);border-width:1.5px}
+.tick.peak.filled{background:var(--jade);border-color:var(--jade)}
+.tick.dead{border-color:var(--seal);border-width:1.5px;
+  background:repeating-linear-gradient(45deg,var(--seal-soft),var(--seal-soft) 3px,transparent 3px,transparent 6px)}
+.tick.dead.filled{background:var(--seal);border-color:var(--seal)}
+.tick.dead .tick-num{color:var(--seal);font-weight:700}
+.tick.here{outline:2px solid var(--seal);outline-offset:1px}
+.tick-num{position:absolute;top:-14px;left:0;right:0;text-align:center;
+  font-family:var(--mono);font-size:8.5px;color:var(--ink-3)}
+.tick.filled .tick-num{color:var(--ink)}
+.tick.peak .tick-num{color:var(--jade);font-weight:700}
+@media(max-width:620px){.tick{width:14px}}
+
+.verdict{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:16px;
+  background:var(--panel-2);border:1px solid var(--rule);border-radius:3px;margin-bottom:16px}
+.stamp{flex:0 0 auto;transform:rotate(-2.5deg);border:2.5px solid var(--seal);border-radius:3px;
+  padding:11px 15px 9px;background:var(--panel);
+  box-shadow:0 0 0 2.5px var(--panel),0 0 0 4px var(--seal);text-align:center;min-width:186px}
+.stamp .act{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--seal);line-height:1.15}
+.stamp .sub{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--seal);opacity:.75;margin-top:4px;border-top:1px solid var(--seal);padding-top:4px}
+.stamp.jade{border-color:var(--jade);box-shadow:0 0 0 2.5px var(--panel),0 0 0 4px var(--jade)}
+.stamp.jade .act,.stamp.jade .sub{color:var(--jade)} .stamp.jade .sub{border-color:var(--jade)}
+.stamp.amber{border-color:var(--amber);box-shadow:0 0 0 2.5px var(--panel),0 0 0 4px var(--amber)}
+.stamp.amber .act,.stamp.amber .sub{color:var(--amber)} .stamp.amber .sub{border-color:var(--amber)}
+.verdict-why{flex:1 1 230px;min-width:210px;font-size:13px;color:var(--ink-2)}
+.verdict-why b{color:var(--ink)}
+
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+th{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+  text-align:left;font-weight:600;padding:0 8px 6px 0;border-bottom:1px solid var(--rule)}
+td{padding:6px 8px 6px 0;border-bottom:1px solid var(--rule-2);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;padding-right:0}
+tr.best td{background:var(--jade-soft)} tr.best td:first-child{font-weight:700}
+.tag{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;padding:1px 5px;
+  border-radius:2px;border:1px solid currentColor;color:var(--jade)}
+
+.outcomes{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:6px}
+.oc{border:1px solid var(--rule);border-radius:2px;padding:7px 5px;text-align:center;background:var(--panel)}
+.oc.bust{border-color:var(--seal);background:var(--seal-soft)}
+.oc.hit{border-color:var(--jade);background:var(--jade-soft)}
+.oc .v{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.oc .t{font-family:var(--mono);font-size:16px;font-weight:700;line-height:1.2}
+.oc .p{font-family:var(--mono);font-size:9.5px;color:var(--ink-2)}
+.oc .pay{font-family:var(--mono);font-size:9px;color:var(--ink-3);margin-top:2px}
+.oc.bust .t,.oc.bust .p{color:var(--seal)} .oc.hit .t,.oc.hit .p{color:var(--jade)}
+.hint{font-size:11.5px;color:var(--ink-3);line-height:1.45;margin-top:9px}
+.a-stop{color:var(--jade);font-weight:700}
+.a-draw{color:var(--ink);font-weight:700}
+.a-forfeit{color:var(--amber);font-weight:700}
+.a-arm{color:var(--seal);font-weight:700}
+footer{margin-top:30px;padding-top:13px;border-top:1px solid var(--rule);
+  font-size:11.5px;color:var(--ink-3)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="masthead">
+    <h1><span>Arknights: Endfield — Trial of Swordmancy</span>Daily Autopilot</h1>
+    <div class="ev-head">
+      <div class="lab">Expected bills per day</div>
+      <div class="num" id="evDay">—<small> optimal play</small></div>
+    </div>
+  </div>
+</header>
+
+<div class="selectors">
+  <div class="sel">
+    <div class="lab">Trial Arena — operations level</div>
+    <div class="seg" id="segLevel"></div>
+    <div class="meta" id="metaLevel"></div>
+  </div>
+  <div class="sel">
+    <div class="lab">Active Dataplate deck</div>
+    <div class="seg" id="segDeck"></div>
+    <div class="meta" id="metaDeck"></div>
+  </div>
+</div>
+
+<div class="cols">
+  <div class="card">
+    <h2>Today <em id="trialMeta"></em></h2>
+
+    <div class="pips-row">
+      <div class="pipgroup"><div class="plab">Rewarded attempts</div>
+        <div class="pips" id="pipAtt"></div><div class="pnote" id="noteAtt"></div></div>
+      <div class="pipgroup"><div class="plab">Free abandons</div>
+        <div class="pips" id="pipFor"></div><div class="pnote" id="noteFor"></div></div>
+      <div class="pipgroup"><div class="plab">Doubling charges</div>
+        <div class="pips" id="pipDbl"></div><div class="pnote" id="noteDbl"></div></div>
+    </div>
+
+    <div class="rule"></div>
+
+    <div class="handrow">
+      <div class="chips" id="drawnRow"></div>
+      <div class="payout" id="payout"></div>
+    </div>
+    <div class="laps" id="laps"></div>
+
+    <div class="rule"></div>
+
+    <div class="plab" id="plateLab"><span id="plateLabText">Tap the plate you
+      drew</span> <span id="deckLeft"></span></div>
+    <div class="plates" id="plateRow"></div>
+
+    <div class="chips" id="actRow"></div>
+    <div class="hint" id="actHint"></div>
+  </div>
+</div>
+
+<div class="verdict" id="verdict"></div>
+
+<div class="cols2">
+  <div class="card">
+    <h2>If you draw one more</h2>
+    <div class="outcomes" id="outcomes"></div>
+    <div class="hint" id="drawSummary"></div>
+  </div>
+  <div class="card">
+    <h2>Every option <em>expected bills, rest of day</em></h2>
+    <table id="optTable"><thead><tr>
+      <th>Action</th><th class="num">EV</th><th class="num">Cost</th><th></th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+</div>
+
+<footer>
+  Set your level and today's deck once, then just tap each plate as you draw it and press the
+  highlighted button. Every call is exact backward induction over (attempts, free abandons,
+  doubling charges, plates drawn, running total, doubling armed, deck remaining) — no heuristics.
+  Payouts wrap on modulo 11, so 11 and 22 pay nothing and 21 pays like 10. A doubling charge is
+  spent only when you fight with it armed: abandoning gives it back. Battle assumed won.
+</footer>
+</div>
+
+<script>
+"use strict";
+/* ═══════════════ GAME DATA (Endfield Talos Wiki) ═══════════════ */
+const PAY = {
+  1:{0:0, 1:500, 2:800, 3:1200, 4:2000, 5:3000, 6:5000, 7:8000, 8:12000, 9:20000, 10:30000},
+  2:{0:0, 1:750, 2:1500,3:2400, 4:3600, 5:6000, 6:10000,7:16000,8:24000,9:40000, 10:60000},
+  3:{0:0, 1:1000,2:2000,3:4000, 4:6000, 5:10000,6:15000,7:25000,8:40000,9:60000, 10:100000},
+  4:{0:0, 1:1000,2:2000,3:4000, 4:7500, 5:12000,6:20000,7:36000,8:60000,9:100000,10:160000}
+};
+// Doubling charges per operations level.
+const CHARGES = {1:0, 2:1, 3:2, 4:2};
+const CHARGES_ASSUMED = false;
+
+// counts = [ #1BP, #2BP, #3BP, #4BP, #5BP ].
+// bonus = golden Bonekrusher Ripptusk plate (5 BP on a weak enemy), included in the counts.
+const DECKS = [
+  {name:"Deck 1", counts:[5,5,5,8,6], bonus:1},
+  {name:"Deck 2", counts:[4,5,6,6,7], bonus:1},
+  {name:"Deck 3", counts:[7,3,7,3,7], bonus:1},
+  {name:"Deck 4", counts:[3,7,7,7,5], bonus:0},
+  {name:"Deck 5", counts:[6,6,9,4,3], bonus:0},
+  {name:"Deck 6", counts:[4,5,4,8,7], bonus:1},
+  {name:"Deck 7", counts:[8,5,2,5,8], bonus:1}
+];
+
+/* ═══════════════ FIXED RULES ═══════════════ */
+const TARGET=10, MAXDRAW=5, ARM_AT=2, MULT=2, ATTEMPTS=3, ABANDONS=3;
+const VALUES=[1,2,3,4,5];
+const MAXTOTAL = MAXDRAW*5;                  // 25
+const tier = t => t % 11;                    // pure mod 11: 11→0, 12→1, 21→10, 22→0
+const PEAK2 = 21;                            // second jackpot, same payout as 10
+
+let level=4, deckIx=0, usedAtt=0, usedFor=0, usedDbl=0, drawn=[], armed=false;
+const $=id=>document.getElementById(id);
+const fmt=n=>Math.round(n).toLocaleString();
+
+/* ═══════════════ SOLVER ═══════════════ */
+const PREF={stop:0,arm:1,forfeit:2,draw:3};
+function makeSolver(counts,pay){
+  const memoU=new Map(), memoW=new Map();
+  const reward = t => pay[tier(t)] || 0;
+  function dist(rem){
+    const out=[]; let avail=0;
+    for(let i=0;i<5;i++) avail+=counts[i]-rem[i];
+    if(avail<=0) return out;
+    for(let i=0;i<5;i++){ const c=counts[i]-rem[i];
+      if(c>0) out.push({i,v:VALUES[i],p:c/avail}); }
+    return out;
+  }
+  function W(A,F,B){
+    if(A<=0) return 0;
+    const k=A+'/'+F+'/'+B;
+    if(memoW.has(k)) return memoW.get(k);
+    const v=U(A,F,B,0,0,[0,0,0,0,0],0).best;
+    memoW.set(k,v); return v;
+  }
+  function U(A,F,B,k,t,rem,d){
+    const key=A+'|'+F+'|'+B+'|'+k+'|'+t+'|'+d+'|'+rem.join('');
+    if(memoU.has(key)) return memoU.get(key);
+    const opts={}, Bafter=B-d;
+    if(k>=1) opts.stop = reward(t)*(d?MULT:1) + W(A-1,F,Bafter);
+    if(k<MAXDRAW){
+      const ds=dist(rem);
+      if(ds.length){ let e=0;
+        for(const o of ds){ const r2=rem.slice(); r2[o.i]++;
+          e+=o.p*U(A,F,B,k+1,t+o.v,r2,d).best; }
+        opts.draw=e; }
+    }
+    // Abandoning REFUNDS an armed doubling charge — the charge is only ever
+    // consumed by cashing out with it. This is worth ~15% of the daily EV.
+    if(k>=1&&F>0) opts.forfeit=W(A,F-1,B);
+    if(k===ARM_AT&&d===0&&B>0) opts.arm=U(A,F,B,k,t,rem,1).best;
+    let bestA=null,best=-Infinity;
+    for(const a in opts){ const v=opts[a];
+      if(v>best+1e-9){best=v;bestA=a;}
+      else if(Math.abs(v-best)<=1e-9&&bestA&&PREF[a]<PREF[bestA]) bestA=a; }
+    const res={best,bestAction:bestA,opts};
+    memoU.set(key,res); return res;
+  }
+  return {W,U,dist,reward};
+}
+/* Solvers are pure functions of (deck, payout table) and the memo tables are
+   expensive to rebuild, so keep one per deck+level for the life of the page. */
+const SOLVERS=new Map();
+function getSolver(counts,pay,key){
+  if(!SOLVERS.has(key)) SOLVERS.set(key,makeSolver(counts,pay));
+  return SOLVERS.get(key);
+}
+
+/* ═══════════════ CHROME ═══════════════ */
+function buildSelectors(){
+  const L=$('segLevel'); L.innerHTML='';
+  [1,2,3,4].forEach(l=>{
+    const b=document.createElement('button');
+    b.textContent='L'+l; b.setAttribute('aria-pressed',l===level);
+    b.onclick=()=>{ level=l; usedDbl=Math.min(usedDbl,CHARGES[l]); newTrial(); };
+    L.appendChild(b);
+  });
+  const D=$('segDeck'); D.innerHTML='';
+  DECKS.forEach((d,i)=>{
+    const b=document.createElement('button');
+    b.textContent=(i+1); b.title=d.name; b.setAttribute('aria-pressed',i===deckIx);
+    b.onclick=()=>{ deckIx=i; newTrial(); };
+    D.appendChild(b);
+  });
+}
+function pipRow(el,total,used,cls,onTap){
+  el.innerHTML='';
+  if(total===0){ const p=document.createElement('span'); p.className='pip none '+cls;
+    el.appendChild(p); return; }
+  const firstSpent = total-used;              // pips deplete right-to-left
+  for(let i=0;i<total;i++){
+    const spent = i>=firstSpent;
+    const b=document.createElement('button');
+    b.className='pip '+cls;
+    b.setAttribute('aria-pressed',spent);
+    b.setAttribute('aria-label',spent?'spent':'available');
+    b.onclick=()=>onTap(spent ? total-i-1 : total-i);
+    el.appendChild(b);
+  }
+}
+function newTrial(){ drawn=[]; armed=false; render(); }
+
+/* ═══════════════ RENDER ═══════════════ */
+function render(){
+  const pay=PAY[level], deck=DECKS[deckIx], counts=deck.counts, maxDbl=CHARGES[level];
+  usedDbl=Math.min(usedDbl,maxDbl);
+  if(armed&&usedDbl===0) usedDbl=1;
+  const S=getSolver(counts,pay,deckIx+'@'+level);
+
+  buildSelectors();
+  const size=counts.reduce((a,b)=>a+b,0);
+  const avg=counts.reduce((s,c,i)=>s+c*VALUES[i],0)/size;
+  $('metaLevel').innerHTML=`top payout <b>${fmt(pay[10])}</b> at 10 BP ·
+    <b>${maxDbl}</b> doubling charge${maxDbl===1?'':'s'}/day
+    ${CHARGES_ASSUMED?'<span class="warn">(charges/level assumed)</span>':''}`;
+  $('metaDeck').innerHTML=`<b>${size}</b> plates ·
+    ${counts.map((c,i)=>c+'×'+VALUES[i]).join('  ')} · avg <b>${avg.toFixed(2)}</b> BP`
+    + (deck.bonus?`<br>includes <b>${deck.bonus}</b> bonus plate (Ripptusk, 5 BP on a weak enemy)`:'');
+
+  const A=ATTEMPTS-usedAtt, F=ABANDONS-usedFor, B=maxDbl-usedDbl+(armed?1:0);
+  pipRow($('pipAtt'),ATTEMPTS,usedAtt,'',n=>{usedAtt=n;newTrial();});
+  pipRow($('pipFor'),ABANDONS,usedFor,'',n=>{usedFor=n;render();});
+  pipRow($('pipDbl'),maxDbl,usedDbl,'dbl',n=>{usedDbl=n;if(n===0)armed=false;render();});
+  $('noteAtt').textContent=A>0?`${A} left (incl. this one)`:'none left — free mode';
+  $('noteFor').textContent=F>0?`${F} free left`:'none — abandons now cost an attempt';
+  $('noteDbl').innerHTML=maxDbl===0?'not unlocked at this level'
+    :(armed?(F>0?'ARMED — refunded if you abandon':'ARMED — no abandons left, this one is committed')
+           :`${maxDbl-usedDbl} unspent`);
+
+  const evDay=S.W(ATTEMPTS,ABANDONS,maxDbl);
+  $('evDay').innerHTML=fmt(evDay)+'<small> optimal play</small>';
+
+  /* plates */
+  const rem=[0,0,0,0,0]; drawn.forEach(v=>rem[v-1]++);
+  const total=drawn.reduce((a,b)=>a+b,0);
+  const dr=$('drawnRow'); dr.innerHTML='';
+  for(let i=0;i<MAXDRAW;i++){
+    const c=document.createElement('div');
+    if(i<drawn.length){c.className='chip';c.textContent=drawn[i];}
+    else {c.className='chip empty';c.textContent='·';}
+    dr.appendChild(c);
+  }
+  $('trialMeta').innerHTML=drawn.length
+    ?`${drawn.length} plate${drawn.length>1?'s':''} · ${total} BP`
+      +(armed?' · <span style="color:var(--seal)">ARMED ×2</span>':'')
+    :'nothing drawn yet';
+  $('deckLeft').innerHTML=`<span style="color:var(--ink-3)">— ${size-drawn.length}
+    of ${size} left in the deck</span>`;
+  $('actHint').innerHTML = drawn.length===0
+    ? `Tap a plate as you draw it. The highlighted button below is the optimal move.`
+    : usedFor>=ABANDONS
+      ? `<b>Fight</b> spends an attempt. Abandoning is locked — your three free abandons are gone,
+         and paying an attempt to redraw is always worse than banking whatever you're holding.`
+      : `<b>Fight</b> spends an attempt, <b>Abandon</b> spends a free abandon`
+        + (armed?`. Abandoning <b>refunds</b> the doubling charge — the ×2 is only
+             consumed if you fight with it.`:`.`);
+
+  /* plate tiles double as the deck tracker */
+  const prow=$('plateRow'); prow.innerHTML=''; prow.className='plates';
+  $('plateLab').className='plab';
+  $('plateLabText').textContent='Tap the plate you drew';
+  VALUES.forEach((v,i)=>{
+    const left=counts[i]-rem[i];
+    const b=document.createElement('button');
+    b.className='plate'; b.disabled=left<=0||drawn.length>=MAXDRAW;
+    let bar=''; for(let j=0;j<counts[i];j++) bar+=`<i class="${j<rem[i]?'used':''}"></i>`;
+    b.innerHTML=`<div class="v">${v}</div><div class="bar">${bar}</div>
+      <div class="ct">${left} of ${counts[i]}</div>`;
+    b.onclick=()=>{drawn.push(v);render();};
+    prow.appendChild(b);
+  });
+
+  const ar=$('actRow'); ar.innerHTML='';
+  const BTN={};
+  const mk=(label,cls,dis,fn)=>{
+    const b=document.createElement('button');
+    b.className='btn '+cls; b.textContent=label; b.disabled=dis; b.onclick=fn;
+    ar.appendChild(b); return b;
+  };
+  mk('Undo','ghost',drawn.length===0,()=>{drawn.pop();render();});
+  if(B>0&&!armed&&drawn.length===ARM_AT)
+    BTN.arm=mk('Arm ×2','',false,()=>{armed=true; if(usedDbl<maxDbl) usedDbl++; render();});
+  const sp=document.createElement('span'); sp.style.flex='1 0 10px'; ar.appendChild(sp);
+  BTN.stop=mk('Fight','go',drawn.length===0||A<=0,()=>{
+    if(usedAtt<ATTEMPTS) usedAtt++;
+    newTrial();
+  });
+  const noFree = usedFor>=ABANDONS;
+  const ab = BTN.forfeit = mk('Abandon','bail',drawn.length===0||noFree,()=>{
+    if(usedFor<ABANDONS){
+      usedFor++;
+      if(armed&&usedDbl>0) usedDbl--;   // charge comes back on abandon
+      newTrial();
+    }
+  });
+  if(noFree) ab.title='No free abandons left. A paid abandon costs an attempt and is never worth it.';
+
+  /* payout readout */
+  const tr=tier(total), now=total>0?pay[tr]*(armed?MULT:1):0;
+  const pEl=$('payout');
+  pEl.className='payout'+(total===0?'':(tr===10?' peak':(tr===0?' dead':'')));
+  pEl.innerHTML=`<span class="lab">Stopping now pays</span>
+    <span class="big">${fmt(now)}</span>
+    <span class="tier">${total>0?`${total} BP → tier ${tr}${armed?' × 2':''}`:'—'}</span>`;
+
+  /* lap gauge */
+  const lp=$('laps'); lp.innerHTML='';
+  const laps=[[1,11,'Lap 1'],[12,22,'Lap 2'],[23,MAXTOTAL,'Lap 3']];
+  laps.forEach(([lo,hi,nm])=>{
+    let cells='';
+    for(let t=lo;t<=hi;t++){
+      const tt=tier(t), pk=tt===10, dead=tt===0;
+      cells+=`<div class="tick${t<=total?' filled':''}${pk?' peak':''}${dead?' dead':''}`+
+        `${t===total?' here':''}">`+
+        `${(t===lo||pk||dead||t===hi)?`<div class="tick-num">${t}</div>`:''}</div>`;
+    }
+    lp.insertAdjacentHTML('beforeend',
+      `<div class="lap"><div class="ln">${nm}</div><div class="lapbar">${cells}</div></div>`);
+  });
+  /* verdict */
+  const vEl=$('verdict'), optBody=$('optTable').querySelector('tbody'), ocEl=$('outcomes');
+  if(A<=0){
+    vEl.innerHTML=`<div class="stamp amber"><div class="act">FREE MODE</div>
+      <div class="sub">no bills today</div></div>
+      <div class="verdict-why">All three rewarded attempts are spent — nothing left to optimise.
+      Good for medal hunting: 21 BP is a full-value 10 after one overflow.</div>`;
+    optBody.innerHTML=''; ocEl.innerHTML=''; $('drawSummary').textContent='';
+    return;
+  }
+
+  const node=S.U(A,F,B,drawn.length,total,rem,armed?1:0), act=node.bestAction;
+  if(act==='draw'&&drawn.length<MAXDRAW){
+    $('plateRow').classList.add('rec');
+    $('plateLab').classList.add('rec');
+    // NB: write to the text span only — #deckLeft is a sibling and must survive
+    $('plateLabText').textContent = drawn.length
+      ? 'Draw another — tap the plate you get'
+      : 'Draw your first plate — tap it here';
+  } else if(BTN[act]&&!BTN[act].disabled) BTN[act].classList.add('rec');
+  if(drawn.length===0){
+    vEl.innerHTML=`<div class="stamp jade"><div class="act">DRAW</div>
+      <div class="sub">open the trial</div></div>
+      <div class="verdict-why">Playing optimally from here is worth <b>${fmt(node.best)}</b>
+      bills across the rest of the day.</div>`;
+  } else {
+    const M={draw:['DRAW AGAIN','another plate','amber'],
+             stop:['STOP · FIGHT','bank this total','jade'],
+             forfeit:['ABANDON','free redraw',''],
+             arm:['ARM ×2','then keep playing','']}[act]||['—','',''];
+    vEl.innerHTML=`<div class="stamp ${M[2]}"><div class="act">${M[0]}</div>
+      <div class="sub">${M[1]}</div></div>
+      <div class="verdict-why">${explain(act,node,total,armed,F,pay)}</div>`;
+  }
+
+  const LABEL={draw:'Draw again',stop:'Stop and fight',forfeit:'Abandon and redraw',arm:'Arm doubling'};
+  optBody.innerHTML='';
+  Object.entries(node.opts).sort((a,b)=>b[1]-a[1]).forEach(([a,v])=>{
+    const d=node.best-v;
+    optBody.insertAdjacentHTML('beforeend',
+      `<tr class="${a===act?'best':''}"><td>${LABEL[a]}</td><td class="num">${fmt(v)}</td>
+       <td class="num">${d<1?'—':'−'+fmt(d)}</td>
+       <td class="num">${a===act?'<span class="tag">take it</span>':''}</td></tr>`);
+  });
+
+  ocEl.innerHTML='';
+  if(drawn.length<MAXDRAW){
+    const ds=S.dist(rem); let pPeak=0, ev=0, pWorse=0;
+    ds.forEach(o=>{
+      const nt=total+o.v, tt=tier(nt), np=pay[tt];
+      const peak=tt===10, worse=np<pay[tier(total)];
+      if(peak)pPeak+=o.p; if(worse)pWorse+=o.p; ev+=o.p*np;
+      ocEl.insertAdjacentHTML('beforeend',
+        `<div class="oc ${peak?'hit':worse?'bust':''}"><div class="v">+${o.v}</div>
+         <div class="t">${nt}</div><div class="p">${(o.p*100).toFixed(0)}%</div>
+         <div class="pay">${fmt(np)}</div></div>`);
+    });
+    $('drawSummary').innerHTML=`Chance the payout <b>drops</b>: ${(pWorse*100).toFixed(0)}% ·
+      hits a 10/20 jackpot: <b>${(pPeak*100).toFixed(0)}%</b> ·
+      average payout after the draw <b>${fmt(ev)}</b>${armed?' (before ×2)':''}.`;
+  } else $('drawSummary').textContent='All five plates are down.';
+}
+
+function explain(a,node,total,armed,F,pay){
+  const o=node.opts, gap=x=>o[x]===undefined?null:node.best-o[x];
+  const tr=tier(total);
+  if(a==='stop'){
+    const g=gap('draw');
+    return `Tier <b>${tr}</b> pays <b>${fmt(pay[tr]*(armed?2:1))}</b>${armed?' with ×2':''}.
+      Banking beats drawing${g!==null?` by <b>${fmt(g)}</b>`:''} — the ladder is steep enough here
+      that another plate risks more than it adds.`;
+  }
+  if(a==='draw'){
+    const g=gap('stop');
+    return `Keep drawing — worth${g!==null?` <b>${fmt(g)}</b> more than banking tier ${tr}`:' more than stopping'}.`+
+      (total>TARGET?` You've already wrapped, so you're climbing toward 21, which pays like 10.`
+       :(!armed&&F>0?` If it overflows you still hold a free abandon, so the downside is covered.`:''));
+  }
+  if(a==='forfeit'){
+    const g=gap('stop');
+    return `Throw it back${g!==null?` — worth <b>${fmt(g)}</b> more than fighting this out`:''}.
+      Free abandons don't touch your three attempts${armed?`, and you get the ×2 charge
+      straight back`:''}, and this hand can't reach a good tier.`;
+  }
+  if(a==='arm'){
+    const g=gap('draw');
+    return `Arm it now — two plates down is the last window${g!==null?`, worth <b>${fmt(g)}</b>
+      over playing unmultiplied`:''}. `+(F>0
+      ? `With <b>${F}</b> free abandon${F===1?'':'s'} in hand this is close to free: if the draw
+         turns ugly you abandon and the charge comes back.`
+      : `No abandons left, so this commits the charge — it only pays off if you fight this hand.`);
+  }
+  return '';
+}
+
+render();
+</script>
+</body>
+</html>
